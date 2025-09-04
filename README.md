@@ -5,9 +5,9 @@
 
 ## Product Vision
 
-FOR new hires and summer interns
-WHO need to find housing in a new area permanently or for a summer for the purposes of a new job and finding a roommate.
-Find Housing is a social media app sort of like linkedin 
-THAT helps match people from similar companies in similar areas and helps find housing in commonly requested areas by multiple parties.
-UNLIKE any other app that exists today
-OUR PRODUCT aims to make finding housing either temporarily or permanently with roommates easier.
+FOR new hires and summer interns  
+WHO need to find housing in a new area permanently or for a summer for the purposes of a new job and finding a roommate.  
+Find Housing is a social media app sort of like linkedin  
+THAT helps match people from similar companies in similar areas and helps find housing in commonly requested areas by multiple parties.  
+UNLIKE any other app that exists today  
+OUR PRODUCT aims to make finding housing either temporarily or permanently with roommates easier.  
