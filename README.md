@@ -1,13 +1,73 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/_KG6YNPd)
-[![Open in Codespaces](https://classroom.github.com/assets/launch-codespace-2972f46106e565e64193e422d61a12cf1da4916b45550586e14ef0a7c637dd04.svg)](https://classroom.github.com/open-in-codespaces?assignment_repo_id=20229890)
+Find Housing – Fullstack MVP
 
-# Project 10
+Stack
+- Client: React + TypeScript (Vite) in `client/`
+- API: Express + PostgreSQL in `server/`
+- DB: Postgres 16 via Docker Compose
 
-## Product Vision
+Prerequisites
+- Node.js 18+ (20+ recommended)
+- Docker Desktop (or a local Postgres 16)
 
-FOR new hires and summer interns  
-WHO need to find housing in a new area permanently or for a summer for the purposes of a new job and finding a roommate.  
-Find Housing is a social media app sort of like linkedin  
-THAT helps match people from similar companies in similar areas and helps find housing in commonly requested areas by multiple parties.  
-UNLIKE any other app that exists today  
-OUR PRODUCT aims to make finding housing either temporarily or permanently with roommates easier.  
+1) Start PostgreSQL
+- From repo root:
+  - `docker compose up -d`
+- This starts Postgres at `localhost:5432` with database `find_housing` and user/password `postgres/postgres`.
+
+2) API: install, seed, run
+- `cd server`
+- `cp .env.example .env` (edit if needed)
+- `npm i`
+- Initialize schema + seed sample data:
+  - `npm run seed`
+- Run the API (dev):
+  - `npm run dev`
+- API default URL: `http://localhost:4000`
+
+Endpoints (MVP)
+- `GET /health` → `{ ok: true }`
+- `POST /admin/init` → idempotent schema init
+- `GET /companies` → companies list
+- `GET /areas` → areas list
+- `GET /listings` → listings (shape matches client Listing)
+- `POST /listings` → create listing
+- `POST /users` → create user (name, age, gender, employer, passcode)
+- `GET /admin/summary` → counts + latest listings
+- `GET /status` → server status page
+
+3) Client: install and run
+- In a new terminal:
+  - `cd client`
+  - `npm i`
+  - Create `.env.local` with API URL:
+    - `echo 'VITE_API_URL=http://localhost:4000' > .env.local`
+  - `npm run dev`
+- Open the URL Vite prints (e.g., `http://localhost:5173`).
+
+Client features (MVP)
+- Minimal signup/login (stored in localStorage: name, age, gender, employer, passcode)
+- Listings grid with sort/filter (city, price range, beds; sort by price/beds/availability)
+- Favorites saved locally
+- If `VITE_API_URL` is set and API is running, listings/users use the API; otherwise it falls back to local mock data.
+
+Optional: pgAdmin dashboard
+- If you run pgAdmin in Docker (e.g., mapped to `5050:80`):
+  - Open `http://localhost:5050` and sign in with the credentials you set for the container
+  - Register your server:
+    - Host: `host.docker.internal`
+    - Port: `5432`
+    - Username: `postgres`
+    - Password: `postgres`
+    - Maintenance DB: `postgres`
+- If pgAdmin runs in the same compose network as Postgres, you can use Host: `db` instead.
+
+Troubleshooting
+- API says “relation ... does not exist”: run `npm run seed` in `server/`.
+- Client fails to fetch listings: confirm `VITE_API_URL` is set and API is running.
+- pgAdmin “Name does not resolve”: use `host.docker.internal` for Host, not `localhost` from the container.
+- Reset pgAdmin admin login: remove its data volume and recreate the container with the desired env vars.
+
+Notes
+- This MVP intentionally skips real authentication and encryption; passcodes are stored in plain text.
+- Data model includes Companies, Users (name/age/gender/employer), Areas, Listings, and Preferences for future matching.
+
