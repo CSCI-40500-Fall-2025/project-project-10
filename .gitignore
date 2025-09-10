@@ -1,0 +1,18 @@
+# Node & build
+node_modules/
+client/node_modules/
+server/node_modules/
+dist/
+client/dist/
+server/dist/
+
+# Env
+.env
+server/.env
+client/.env
+client/.env.local
+
+# OS / editor
+.DS_Store
+*.log
+
