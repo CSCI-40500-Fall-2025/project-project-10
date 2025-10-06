@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { BrowserRouter, Routes, Route, useNavigate, useParams, Link } from 'react-router-dom'
 import './App.css'
 import './index.css'
 import type { Listing, User } from './types'
@@ -15,10 +16,17 @@ import { lightBlue } from '@mui/material/colors'
 type AuthView = 'login' | 'signup'
 
 export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  )
+}
+
+function AppRoutes() {
   const [authView, setAuthView] = useState<AuthView>('login')
   const [user, setUser] = useState<User | null>(() => getCurrentUser())
   const [listings, setListings] = useState<Listing[]>([])
-  const [filters, setFilters] = useState<FiltersState>({ city: '', minPrice: '', maxPrice: '', beds: '', sort: 'priceAsc' })
 
   useEffect(() => {
     const run = async () => {
@@ -38,6 +46,32 @@ export default function App() {
   }, [])
 
   const onLogout = () => { clearUser(); setUser(null) }
+
+  if (!user) return (
+    <AuthShell view={authView} setView={setAuthView} onAuthed={setUser} />
+  )
+
+  return (
+    <div style={{ width: '100%', margin: '0 auto'}}>
+      <Header user={user} onLogout={onLogout} />
+      
+      <Routes>
+        <Route path="/" element={<ListingsPage listings={listings} />} />
+        <Route path="/listing/:id" element={<ListingDetailPage listings={listings} />} />
+      </Routes>
+    </div>
+  )
+}
+
+function ListingsPage({ listings }: { listings: Listing[] }) {
+  const navigate = useNavigate()
+  const [filters, setFilters] = useState<FiltersState>({ 
+    city: '', 
+    minPrice: '', 
+    maxPrice: '', 
+    beds: '', 
+    sort: 'priceAsc' 
+  })
 
   const filtered = useMemo(() => {
     let arr = [...listings]
@@ -59,31 +93,174 @@ export default function App() {
     return arr
   }, [listings, filters])
 
-  if (!user) return (
-    <AuthShell view={authView} setView={setAuthView} onAuthed={setUser} />
+  return (
+    <div style={{display: 'flex', justifyContent: "space-between", maxWidth: 1440, width: '100%', margin: '24px auto 0 auto'}}>
+      <Filters cities={listings.map(l=>l.city)} onChange={setFilters} />
+
+      <div>
+        {filtered.length > 0 && (
+          <>
+            <Typography sx={{textAlign: "left", color: "black"}} variant="h4">{`Results (${filtered.length})`}</Typography>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 400px)', gridTemplateRows: "350px 350px", gridGap: "16px" }}>
+              {filtered.map(l => (
+                <Box 
+                  key={l.id} 
+                  sx={{placeSelf: "center", cursor: 'pointer'}}
+                  onClick={() => navigate(`/listing/${l.id}`)}
+                >
+                  <ListingCard listing={l} />
+                </Box>
+              ))}
+            </div>          
+          </>
+        )}
+        {filtered.length === 0 && (
+          <Typography style={{opacity:0.7, marginTop: 20, color: "black", textAlign: "left"}} variant="h3">
+            No results. Try broadening your filters.
+          </Typography>
+        )}
+      </div>
+    </div>
   )
+}
+
+function ListingDetailPage({ listings }: { listings: Listing[] }) {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  
+  const listing = listings.find(l => l.id === id)
+
+  if (!listing) {
+    return (
+      <div style={{ maxWidth: 900, margin: '24px auto', padding: '0 24px' }}>
+        <Typography variant="h4" sx={{ color: 'black' }}>
+          Listing not found
+        </Typography>
+        <button onClick={() => navigate('/')} style={{ marginTop: 20 }}>
+          ← Back to Listings
+        </button>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ width: '100%', margin: '0 auto'}}>
-      <Header user={user} onLogout={onLogout} />
+    <div style={{ maxWidth: 900, margin: '24px auto', padding: '0 24px' }}>
+      <button onClick={() => navigate('/')} style={{ marginBottom: 20 }}>
+        ← Back to Listings
+      </button>
+      
+      <div style={{ background: 'white', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <img 
+          src={listing.imageUrl} 
+          alt={listing.title}
+          style={{ width: '100%', height: 400, objectFit: 'cover' }}
+        />
+        
+        <div style={{ padding: 32 }}>
+          <Typography variant="h3" sx={{ color: 'black', marginBottom: 2 }}>
+            {listing.title}
+          </Typography>
+          
+          <Typography variant="h4" sx={{ color: '#f7ad45', marginBottom: 3 }}>
+            ${listing.price.toLocaleString()}/month
+          </Typography>
 
-      <div style={{display: 'flex', justifyContent: "space-between", maxWidth: 1440, width: '100%', margin: '24px auto 0 auto'}}>
-        <Filters cities={listings.map(l=>l.city)} onChange={setFilters} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 24 }}>
+            <div>
+              <Typography variant="subtitle2" sx={{ color: '#666', marginBottom: 0.5 }}>
+                Bedrooms
+              </Typography>
+              <Typography variant="h6" sx={{ color: 'black' }}>
+                {listing.bedrooms}
+              </Typography>
+            </div>
+            
+            <div>
+              <Typography variant="subtitle2" sx={{ color: '#666', marginBottom: 0.5 }}>
+                Bathrooms
+              </Typography>
+              <Typography variant="h6" sx={{ color: 'black' }}>
+                {listing.bathrooms}
+              </Typography>
+            </div>
+            
+            {listing.sqft && (
+              <div>
+                <Typography variant="subtitle2" sx={{ color: '#666', marginBottom: 0.5 }}>
+                  Square Feet
+                </Typography>
+                <Typography variant="h6" sx={{ color: 'black' }}>
+                  {listing.sqft.toLocaleString()} sq ft
+                </Typography>
+              </div>
+            )}
+            
+            <div>
+              <Typography variant="subtitle2" sx={{ color: '#666', marginBottom: 0.5 }}>
+                Available From
+              </Typography>
+              <Typography variant="h6" sx={{ color: 'black' }}>
+                {new Date(listing.availableFrom).toLocaleDateString()}
+              </Typography>
+            </div>
+          </div>
 
-        {/* Area for search results */}
-        <div>
-          {filtered.length > 0 && (
-            <>
-              <Typography sx={{textAlign: "left", color: "black"}} variant="h4">{`Results (${filtered.length})`}</Typography>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 400px)', gridTemplateRows: "350px 350px", gridGap: "16px" }}>
-                {filtered.map(l =>  <Box sx={{placeSelf: "center"}}><ListingCard key={l.id} listing={l} /> </Box> )}
-              </div>          
-            </>
-          )
-        }
-          {filtered.length === 0 && <Typography style={{opacity:0.7, marginTop: 20, color: "black", textAlign: "left"}} variant="h3">No results. Try broadening your filters.</Typography>}
+          <div style={{ marginBottom: 24 }}>
+            <Typography variant="h6" sx={{ color: 'black', marginBottom: 1 }}>
+              Amenities
+            </Typography>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {listing.furnished && (
+                <span style={{ 
+                  padding: '6px 12px', 
+                  background: '#e3f2fd', 
+                  color: '#1976d2',
+                  borderRadius: 16,
+                  fontSize: 14
+                }}>
+                  Furnished
+                </span>
+              )}
+              {listing.petsAllowed && (
+                <span style={{ 
+                  padding: '6px 12px', 
+                  background: '#e8f5e9', 
+                  color: '#388e3c',
+                  borderRadius: 16,
+                  fontSize: 14
+                }}>
+                  Pets Allowed
+                </span>
+              )}
+            </div>
+          </div>
+
+          {listing.description && (
+            <div>
+              <Typography variant="h6" sx={{ color: 'black', marginBottom: 1 }}>
+                Description
+              </Typography>
+              <Typography sx={{ color: '#555', lineHeight: 1.7 }}>
+                {listing.description}
+              </Typography>
+            </div>
+          )}
+
+          <button 
+            style={{ 
+              marginTop: 32, 
+              width: '100%', 
+              padding: '12px',
+              background: lightBlue['A400'],
+              color: 'white',
+              border: 'none',
+              fontSize: 16,
+              fontWeight: 600
+            }}
+          >
+            Contact About This Listing
+          </button>
         </div>
-
       </div>
     </div>
   )
@@ -97,11 +274,15 @@ function Header({ user, onLogout }: { user: User, onLogout: () => void }) {
     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', top:0, background:'white', padding:'12px 24px' }}>
       <div style={{display: 'flex', justifyContent: "space-between", gap: "25px"}}>
         <div style={{display: 'flex', justifyContent: "space-between", alignItems: "center", gap: "10px"}}>
-          <AcUnitIcon sx={{color: lightBlue['A400'], height: "36px", width: "36px"}}/>
-          <Typography variant="h5" sx={{color: "black"}}>RoomieMatch</Typography>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+            <AcUnitIcon sx={{color: lightBlue['A400'], height: "36px", width: "36px"}}/>
+            <Typography variant="h5" sx={{color: "black"}}>RoomieMatch</Typography>
+          </Link>
         </div>
         <div style={{display: 'flex', justifyContent: "space-between", alignItems: "center", gap: "15px"}}>
-          <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Home</Typography>
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Home</Typography>
+          </Link>
           <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Explore</Typography>
           <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Messages</Typography>
         </div>
