@@ -4,9 +4,13 @@ import './index.css'
 import type { Listing, User } from './types'
 import { clearUser, getCurrentUser, getListings, saveUser, seedListingsIfNeeded } from './storage'
 import { generateMockListings } from './mockListings'
-import ListingCard from './components/ListingCard'
+import {ListingCard} from './components/NewListingCard'
 import Filters, { type FiltersState } from './components/Filters'
 import { createUser as apiCreateUser, fetchListings, hasApi } from './api'
+
+import AcUnitIcon from '@mui/icons-material/AcUnit';
+import { Box, Typography } from '@mui/material'
+import { lightBlue } from '@mui/material/colors'
 
 type AuthView = 'login' | 'signup'
 
@@ -60,25 +64,52 @@ export default function App() {
   )
 
   return (
-    <div style={{ width: '100%', maxWidth: 1200, margin: '0 auto', padding: '16px' }}>
+    <div style={{ width: '100%', margin: '0 auto'}}>
       <Header user={user} onLogout={onLogout} />
-      <h2 style={{ marginTop: 12 }}>Browse Listings</h2>
-      <Filters cities={listings.map(l=>l.city)} onChange={setFilters} />
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
-        {filtered.map(l => <ListingCard key={l.id} listing={l} />)}
+
+      <div style={{display: 'flex', justifyContent: "space-between", maxWidth: 1440, width: '100%', margin: '24px auto 0 auto'}}>
+        <Filters cities={listings.map(l=>l.city)} onChange={setFilters} />
+
+        {/* Area for search results */}
+        <div>
+          {filtered.length > 0 && (
+            <>
+              <Typography sx={{textAlign: "left", color: "black"}} variant="h4">{`Results (${filtered.length})`}</Typography>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 400px)', gridTemplateRows: "350px 350px", gridGap: "16px" }}>
+                {filtered.map(l =>  <Box sx={{placeSelf: "center"}}><ListingCard key={l.id} listing={l} /> </Box> )}
+              </div>          
+            </>
+          )
+        }
+          {filtered.length === 0 && <Typography style={{opacity:0.7, marginTop: 20, color: "black", textAlign: "left"}} variant="h3">No results. Try broadening your filters.</Typography>}
+        </div>
+
       </div>
-      {filtered.length === 0 && <p style={{opacity:0.7, marginTop: 20}}>No results. Try broadening your filters.</p>}
     </div>
   )
 }
 
+/*
+  Header for the entire website
+*/
 function Header({ user, onLogout }: { user: User, onLogout: () => void }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, background:'var(--bg, #242424)', padding:'12px 0' }}>
-      <div style={{ fontWeight: 700 }}>Find Housing</div>
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', top:0, background:'white', padding:'12px 24px' }}>
+      <div style={{display: 'flex', justifyContent: "space-between", gap: "25px"}}>
+        <div style={{display: 'flex', justifyContent: "space-between", alignItems: "center", gap: "10px"}}>
+          <AcUnitIcon sx={{color: lightBlue['A400'], height: "36px", width: "36px"}}/>
+          <Typography variant="h5" sx={{color: "black"}}>RoomieMatch</Typography>
+        </div>
+        <div style={{display: 'flex', justifyContent: "space-between", alignItems: "center", gap: "15px"}}>
+          <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Home</Typography>
+          <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Explore</Typography>
+          <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Messages</Typography>
+        </div>
+      </div>
+
       <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-        <span style={{ opacity: 0.8 }}>{user.name} • {user.employer}</span>
-        <button onClick={onLogout}>Logout</button>
+        <span style={{ opacity: 0.8, color: "black" }}>{user.name} • {user.employer}</span>
+        <button style={{backgroundColor: "white", color: "black"}} onClick={onLogout}>Logout</button>
       </div>
     </div>
   )
