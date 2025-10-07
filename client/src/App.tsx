@@ -9,7 +9,7 @@ import Filters, { type FiltersState } from './components/Filters'
 import { createUser as apiCreateUser, fetchListings, hasApi } from './api'
 
 import AcUnitIcon from '@mui/icons-material/AcUnit';
-import { Box, Typography } from '@mui/material'
+import { Box, Typography, TextField, Button, Paper, Container, Tabs, Tab, MenuItem } from '@mui/material'
 import { lightBlue } from '@mui/material/colors'
 
 type AuthView = 'login' | 'signup'
@@ -117,13 +117,61 @@ function Header({ user, onLogout }: { user: User, onLogout: () => void }) {
 
 function AuthShell({ view, setView, onAuthed }: { view: AuthView, setView: (v:AuthView)=>void, onAuthed:(u:User)=>void }) {
   return (
-    <div style={{ maxWidth: 520, width:'100%', margin: '40px auto', padding: 16 }}>
-      <div style={{ display:'flex', gap:8, justifyContent:'center', marginBottom: 12 }}>
-        <button onClick={()=>setView('login')} aria-pressed={view==='login'}>Login</button>
-        <button onClick={()=>setView('signup')} aria-pressed={view==='signup'}>Sign Up</button>
-      </div>
-      {view === 'login' ? <LoginForm onAuthed={onAuthed} /> : <SignupForm onAuthed={onAuthed} />}
-    </div>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      background: '#F5F5F5'
+    }}>
+      <Container maxWidth="sm">
+        <Paper elevation={6} sx={{ 
+          borderRadius: 3, 
+          overflow: 'hidden',
+          background: 'white'
+        }}>
+          {/* Logo Header */}
+          <Box sx={{ 
+            p: 4, 
+            pb: 2,
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            gap: 1.5
+          }}>
+            <AcUnitIcon sx={{ color: lightBlue['A400'], fontSize: 48 }} />
+            <Typography variant="h3" sx={{ fontWeight: 700, color: '#333' }}>
+              RoomieMatch
+            </Typography>
+          </Box>
+
+          {/* Tabs */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs 
+              value={view} 
+              onChange={(_, v) => setView(v)}
+              centered
+              sx={{
+                '& .MuiTab-root': { 
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  minWidth: 120
+                }
+              }}
+            >
+              <Tab label="Login" value="login" />
+              <Tab label="Sign Up" value="signup" />
+            </Tabs>
+          </Box>
+
+          {/* Forms */}
+          <Box sx={{ p: 4 }}>
+            {view === 'login' ? <LoginForm onAuthed={onAuthed} /> : <SignupForm onAuthed={onAuthed} />}
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   )
 }
 
@@ -142,12 +190,51 @@ function LoginForm({ onAuthed }: { onAuthed:(u:User)=>void }) {
     onAuthed(u)
   }
   return (
-    <form onSubmit={submit} style={{ display:'grid', gap:12 }}>
-      <h2>Login</h2>
-      <input placeholder="Name" value={form.name} onChange={e=>setForm(f=>({ ...f, name:e.target.value }))} />
-      <input placeholder="Passcode" value={form.password} onChange={e=>setForm(f=>({ ...f, password:e.target.value }))} />
-      <button type="submit">Enter</button>
-      <p style={{ opacity: 0.7, fontSize: 14 }}>No real auth for MVP. Any name + passcode works.</p>
+    <form onSubmit={submit}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, color: '#333', mb: 1 }}>
+          Welcome back
+        </Typography>
+        
+        <TextField
+          label="Name"
+          value={form.name}
+          onChange={e=>setForm(f=>({ ...f, name:e.target.value }))}
+          fullWidth
+          required
+          variant="outlined"
+        />
+        
+        <TextField
+          label="Passcode"
+          type="password"
+          value={form.password}
+          onChange={e=>setForm(f=>({ ...f, password:e.target.value }))}
+          fullWidth
+          required
+          variant="outlined"
+        />
+        
+        <Button 
+          type="submit" 
+          variant="contained" 
+          size="large"
+          fullWidth
+          sx={{ 
+            mt: 1,
+            py: 1.5,
+            textTransform: 'none',
+            fontSize: '1rem',
+            fontWeight: 600,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)',
+            }
+          }}
+        >
+          Sign In
+        </Button>
+      </Box>
     </form>
   )
 }
@@ -167,21 +254,88 @@ function SignupForm({ onAuthed }: { onAuthed:(u:User)=>void }) {
     onAuthed(u)
   }
   return (
-    <form onSubmit={submit} style={{ display:'grid', gap:12 }}>
-      <h2>Create account</h2>
-      <input placeholder="Name" value={form.name} onChange={e=>setForm(f=>({ ...f, name:e.target.value }))} required />
-      <input placeholder="Age" type="number" value={form.age} onChange={e=>setForm(f=>({ ...f, age:e.target.value }))} />
-      <select value={form.gender} onChange={e=>setForm(f=>({ ...f, gender:e.target.value }))}>
-        <option value="">Prefer not to say</option>
-        <option>Female</option>
-        <option>Male</option>
-        <option>Non-binary</option>
-        <option>Other</option>
-      </select>
-      <input placeholder="Employer / Company" value={form.employer} onChange={e=>setForm(f=>({ ...f, employer:e.target.value }))} required />
-      <input placeholder="Passcode" value={form.password} onChange={e=>setForm(f=>({ ...f, password:e.target.value }))} required />
-      <button type="submit">Sign up</button>
-      <p style={{ opacity: 0.7, fontSize: 14 }}>We only store this in your browser for MVP.</p>
+    <form onSubmit={submit}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, color: '#333', mb: 1 }}>
+          Create your account
+        </Typography>
+        
+        <TextField
+          label="Name"
+          value={form.name}
+          onChange={e=>setForm(f=>({ ...f, name:e.target.value }))}
+          fullWidth
+          required
+          variant="outlined"
+        />
+        
+        <TextField
+          label="Age"
+          type="number"
+          value={form.age}
+          onChange={e=>setForm(f=>({ ...f, age:e.target.value }))}
+          fullWidth
+          variant="outlined"
+        />
+        
+        <TextField
+          select
+          label="Gender"
+          value={form.gender}
+          onChange={e=>setForm(f=>({ ...f, gender:e.target.value }))}
+          fullWidth
+          variant="outlined"
+        >
+          <MenuItem value="">Prefer not to say</MenuItem>
+          <MenuItem value="Female">Female</MenuItem>
+          <MenuItem value="Male">Male</MenuItem>
+          <MenuItem value="Non-binary">Non-binary</MenuItem>
+          <MenuItem value="Other">Other</MenuItem>
+        </TextField>
+        
+        <TextField
+          label="Employer / Company"
+          value={form.employer}
+          onChange={e=>setForm(f=>({ ...f, employer:e.target.value }))}
+          fullWidth
+          required
+          variant="outlined"
+        />
+        
+        <TextField
+          label="Passcode"
+          type="password"
+          value={form.password}
+          onChange={e=>setForm(f=>({ ...f, password:e.target.value }))}
+          fullWidth
+          required
+          variant="outlined"
+        />
+        
+        <Button 
+          type="submit" 
+          variant="contained" 
+          size="large"
+          fullWidth
+          sx={{ 
+            mt: 1,
+            py: 1.5,
+            textTransform: 'none',
+            fontSize: '1rem',
+            fontWeight: 600,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)',
+            }
+          }}
+        >
+          Create Account
+        </Button>
+
+        <Typography variant="body2" sx={{ color: '#666', textAlign: 'center', mt: 1 }}>
+          We only store this in your browser for MVP.
+        </Typography>
+      </Box>
     </form>
   )
 }
