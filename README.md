@@ -34,6 +34,8 @@ Endpoints (MVP)
 - `POST /users` → create user (name, age, gender, employer, passcode)
 - `GET /admin/summary` → counts + latest listings
 - `GET /status` → server status page
+- `POST /login` → login form information is compared
+- `POST /signup` → db entry is created and is checked from the login post info
 
 3) Client: install and run
 - In a new terminal:
