@@ -5,16 +5,8 @@ import { z } from 'zod'
 import { pool, query } from './db'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
 
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-dotenv.config({ path: join(__dirname, '..', '.env') })
-
-
+dotenv.config()
 
 const app = express()
 app.use(cors())
@@ -125,7 +117,7 @@ app.post('/listings', async (req, res) => {
 })
 
 
-const JWT_SECRET = process.env.JWT_SECRET || '.env_problem'
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me'
 
 function signToken(payload: any) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' })
@@ -151,6 +143,9 @@ app.post('/signup', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ message: 'Invalid input' })
 
     const { name, password, employer } = parsed.data
+
+    const exists = await query('SELECT 1 FROM users WHERE name = $1', [name])
+    if (exists) return res.status(400).json({ message: 'User already exists' })
 
     const hash = await bcrypt.hash(password, 12)
     const { rows } = await query<{ id: string; name: string; employer: string }>(
@@ -182,7 +177,7 @@ app.post('/login', async (req, res) => {
 
     const stored = String(u.passcode || '')
     const ok = stored.startsWith('$2') ? await bcrypt.compare(password, stored) : stored === password
-    if (!ok) return res.status(401).json({ message: 'Wrong Password' })
+    if (!ok) return res.status(401).json({ message: 'Invalid credentials' })
 
     const token = signToken({ id: u.id, name: u.name, employer: u.employer })
     res.json({ token, user: { id: u.id, name: u.name, employer: u.employer } })
@@ -203,6 +198,7 @@ app.get('/protected', (req, res) => {
     res.json({ user: { id: payload.id, name: payload.name, employer: payload.employer } })
   })
 })
+
 
 const port = Number(process.env.PORT || 4000)
 app.listen(port, () => console.log(`API listening on http://localhost:${port}`))

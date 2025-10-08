@@ -5,25 +5,17 @@ import { z } from 'zod'
 import { pool, query } from './db'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
 
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-dotenv.config({ path: join(__dirname, '..', '.env') })
-
-
+dotenv.config()
 
 const app = express()
 app.use(cors())
 app.use(express.json())
 
-// health
+// ---------- Health ----------
 app.get('/health', (_req, res) => res.json({ ok: true }))
 
-// admin view
+// ---------- Admin init (schema) ----------
 app.post('/admin/init', async (_req, res) => {
   try {
     await pool.query("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
@@ -37,13 +29,13 @@ app.post('/admin/init', async (_req, res) => {
   }
 })
 
-// companies
+// ---------- Companies ----------
 app.get('/companies', async (_req, res) => {
   const { rows } = await query('SELECT id, name, domain FROM companies ORDER BY name ASC')
   res.json(rows)
 })
 
-
+// ---------- Users (schema for /users) ----------
 const UserSchema = z.object({
   name: z.string().min(1),
   age: z.number().int().min(16).max(100).nullable().optional(),
@@ -53,7 +45,7 @@ const UserSchema = z.object({
   companyId: z.number().int().optional().nullable()
 })
 
-
+// NOTE: Only ONE /users route — stores HASH (no plaintext).
 app.post('/users', async (req, res) => {
   const parsed = UserSchema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
@@ -66,6 +58,7 @@ app.post('/users', async (req, res) => {
     [u.name, u.age ?? null, u.gender ?? '', u.employer, u.companyId ?? null, hash]
   )
 
+  // never return passcode/hash
   res.status(201).json({
     id: rows[0].id,
     name: u.name,
@@ -76,14 +69,26 @@ app.post('/users', async (req, res) => {
   })
 })
 
+// Optional: delete a user by id (helpful during dev)
+app.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { rows } = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id])
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' })
+    res.json({ ok: true, id: rows[0].id })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: 'Failed to delete user' })
+  }
+})
 
-
+// ---------- Areas ----------
 app.get('/areas', async (_req, res) => {
   const { rows } = await query('SELECT id, name, city, state, lat, lng FROM areas ORDER BY city, name')
   res.json(rows)
 })
 
-// listings
+// ---------- Listings ----------
 app.get('/listings', async (_req, res) => {
   const { rows } = await query(
     `SELECT id, title, city, area_id as "areaId", price, bedrooms, bathrooms,
@@ -124,8 +129,8 @@ app.post('/listings', async (req, res) => {
   res.status(201).json({ id: rows[0].id, ...l })
 })
 
-
-const JWT_SECRET = process.env.JWT_SECRET || '.env_problem'
+// ---------- Auth (matches your React UI) ----------
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me'
 
 function signToken(payload: any) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' })
@@ -139,7 +144,7 @@ async function getUserByName(name: string) {
   return rows[0] || null
 }
 
-// signup
+// SIGNUP: { name, password, employer } -> { token, user }
 app.post('/signup', async (req, res) => {
   try {
     const Body = z.object({
@@ -151,6 +156,9 @@ app.post('/signup', async (req, res) => {
     if (!parsed.success) return res.status(400).json({ message: 'Invalid input' })
 
     const { name, password, employer } = parsed.data
+
+    const exists = await query('SELECT 1 FROM users WHERE name = $1', [name])
+    if (exists) return res.status(400).json({ message: 'User already exists' })
 
     const hash = await bcrypt.hash(password, 12)
     const { rows } = await query<{ id: string; name: string; employer: string }>(
@@ -182,7 +190,7 @@ app.post('/login', async (req, res) => {
 
     const stored = String(u.passcode || '')
     const ok = stored.startsWith('$2') ? await bcrypt.compare(password, stored) : stored === password
-    if (!ok) return res.status(401).json({ message: 'Wrong Password' })
+    if (!ok) return res.status(401).json({ message: 'Invalid credentials' })
 
     const token = signToken({ id: u.id, name: u.name, employer: u.employer })
     res.json({ token, user: { id: u.id, name: u.name, employer: u.employer } })
@@ -203,6 +211,7 @@ app.get('/protected', (req, res) => {
     res.json({ user: { id: payload.id, name: payload.name, employer: payload.employer } })
   })
 })
+
 
 const port = Number(process.env.PORT || 4000)
 app.listen(port, () => console.log(`API listening on http://localhost:${port}`))

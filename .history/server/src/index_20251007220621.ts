@@ -3,27 +3,20 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { z } from 'zod'
 import { pool, query } from './db'
-import jwt from 'jsonwebtoken'
-import bcrypt from 'bcryptjs'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import jwt from 'jsonwebtoken';        
+import bcrypt from 'bcrypt';
 
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-dotenv.config({ path: join(__dirname, '..', '.env') })
-
-
+dotenv.config()
 
 const app = express()
 app.use(cors())
 app.use(express.json())
 
-// health
+// Health check
 app.get('/health', (_req, res) => res.json({ ok: true }))
 
-// admin view
+// Initialize schema (idempotent). Requires pgcrypto for gen_random_uuid()
 app.post('/admin/init', async (_req, res) => {
   try {
     await pool.query("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
@@ -37,12 +30,11 @@ app.post('/admin/init', async (_req, res) => {
   }
 })
 
-// companies
+// Companies
 app.get('/companies', async (_req, res) => {
   const { rows } = await query('SELECT id, name, domain FROM companies ORDER BY name ASC')
   res.json(rows)
 })
-
 
 const UserSchema = z.object({
   name: z.string().min(1),
@@ -53,37 +45,25 @@ const UserSchema = z.object({
   companyId: z.number().int().optional().nullable()
 })
 
-
 app.post('/users', async (req, res) => {
   const parsed = UserSchema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
   const u = parsed.data
-
-  const hash = await bcrypt.hash(u.passcode, 12)
   const { rows } = await query<{ id: string }>(
     `INSERT INTO users (name, age, gender, employer, company_id, passcode)
      VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-    [u.name, u.age ?? null, u.gender ?? '', u.employer, u.companyId ?? null, hash]
+    [u.name, u.age ?? null, u.gender ?? '', u.employer, u.companyId ?? null, u.passcode]
   )
-
-  res.status(201).json({
-    id: rows[0].id,
-    name: u.name,
-    age: u.age ?? null,
-    gender: u.gender ?? '',
-    employer: u.employer,
-    companyId: u.companyId ?? null
-  })
+  res.status(201).json({ id: rows[0].id, ...u })
 })
 
-
-
+// Areas
 app.get('/areas', async (_req, res) => {
   const { rows } = await query('SELECT id, name, city, state, lat, lng FROM areas ORDER BY city, name')
   res.json(rows)
 })
 
-// listings
+// Listings
 app.get('/listings', async (_req, res) => {
   const { rows } = await query(
     `SELECT id, title, city, area_id as "areaId", price, bedrooms, bathrooms,
@@ -123,86 +103,92 @@ app.post('/listings', async (req, res) => {
   )
   res.status(201).json({ id: rows[0].id, ...l })
 })
+// delete by id (UUID)
+app.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // optional: basic UUID sanity check
+    // if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: 'Invalid id' });
 
+    const { rows } = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json({ ok: true, id: rows[0].id });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+app.post('/users', async (req, res) => {
+  const parsed = UserSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
-const JWT_SECRET = process.env.JWT_SECRET || '.env_problem'
+  const u = parsed.data;
 
-function signToken(payload: any) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' })
-}
+  // hash the passcode before inserting
+  const hash = await bcrypt.hash(u.passcode, 12);
+
+  const { rows } = await query<{ id: string }>(
+    `INSERT INTO users (name, age, gender, employer, company_id, passcode)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+    [u.name, u.age ?? null, u.gender ?? '', u.employer, u.companyId ?? null, hash]
+  );
+
+  // never return the passcode/hash
+  res.status(201).json({
+    id: rows[0].id,
+    name: u.name,
+    age: u.age ?? null,
+    gender: u.gender ?? '',
+    employer: u.employer,
+    companyId: u.companyId ?? null
+  });
+});
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 
 async function getUserByName(name: string) {
   const { rows } = await query(
     'SELECT id, name, employer, passcode FROM users WHERE name = $1',
     [name]
-  )
-  return rows[0] || null
+  );
+  return rows[0] || null;
 }
 
-// signup
-app.post('/signup', async (req, res) => {
-  try {
-    const Body = z.object({
-      name: z.string().min(1),
-      password: z.string().min(1),
-      employer: z.string().min(1)
-    })
-    const parsed = Body.safeParse(req.body)
-    if (!parsed.success) return res.status(400).json({ message: 'Invalid input' })
-
-    const { name, password, employer } = parsed.data
-
-    const hash = await bcrypt.hash(password, 12)
-    const { rows } = await query<{ id: string; name: string; employer: string }>(
-      `INSERT INTO users (name, age, gender, employer, company_id, passcode)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       RETURNING id, name, employer`,
-      [name, null, '', employer, null, hash]
-    )
-
-    const user = rows[0]
-    const token = signToken({ id: user.id, name: user.name, employer: user.employer })
-    res.json({ token, user })
-  } catch (e) {
-    console.error(e)
-    res.status(500).json({ message: 'Signup failed' })
-  }
-})
-
-
+// Accepts { name, passcode }  (you can also accept { name, password } if you want)
 app.post('/login', async (req, res) => {
+  const Body = z.object({ name: z.string().min(1), passcode: z.string().min(1) });
+  const parsed = Body.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid input' });
+
+  const u = await getUserByName(parsed.data.name);
+  if (!u) return res.status(401).json({ error: 'Invalid credentials' });
+
+  // compare against the hashed value stored in DB
+  const ok = await bcrypt.compare(parsed.data.passcode, u.passcode);
+  if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+
+  const accessToken = jwt.sign(
+    { sub: u.id, name: u.name, employer: u.employer },
+    JWT_SECRET,
+    { expiresIn: '15m' }
+  );
+
+  res.json({ accessToken, user: { id: u.id, name: u.name, employer: u.employer } });
+});
+
+// Protected example (Authorization: Bearer <accessToken>)
+app.get('/me', (req, res) => {
+  const auth = req.header('authorization');
+  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing token' });
   try {
-    const Body = z.object({ name: z.string().min(1), password: z.string().min(1) })
-    const parsed = Body.safeParse(req.body)
-    if (!parsed.success) return res.status(400).json({ message: 'Invalid input' })
-
-    const { name, password } = parsed.data
-    const u = await getUserByName(name)
-    if (!u) return res.status(401).json({ message: 'Invalid credentials' })
-
-    const stored = String(u.passcode || '')
-    const ok = stored.startsWith('$2') ? await bcrypt.compare(password, stored) : stored === password
-    if (!ok) return res.status(401).json({ message: 'Wrong Password' })
-
-    const token = signToken({ id: u.id, name: u.name, employer: u.employer })
-    res.json({ token, user: { id: u.id, name: u.name, employer: u.employer } })
-  } catch (e) {
-    console.error(e)
-    res.status(500).json({ message: 'Login failed' })
+    const payload = jwt.verify(auth.slice(7), JWT_SECRET) as any;
+    res.json({ user: { id: payload.sub, name: payload.name, employer: payload.employer } });
+  } catch {
+    res.status(401).json({ error: 'Invalid/expired token' });
   }
-})
+});
 
-
-app.get('/protected', (req, res) => {
-  const authHeader = req.headers['authorization']
-  const token = authHeader?.split(' ')[1]
-  if (!token) return res.sendStatus(401)
-
-  jwt.verify(token, JWT_SECRET, (err, payload: any) => {
-    if (err) return res.sendStatus(403)
-    res.json({ user: { id: payload.id, name: payload.name, employer: payload.employer } })
-  })
-})
 
 const port = Number(process.env.PORT || 4000)
 app.listen(port, () => console.log(`API listening on http://localhost:${port}`))
+

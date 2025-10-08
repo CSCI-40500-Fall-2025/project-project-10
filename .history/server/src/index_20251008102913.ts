@@ -203,6 +203,7 @@ app.get('/protected', (req, res) => {
     res.json({ user: { id: payload.id, name: payload.name, employer: payload.employer } })
   })
 })
-
+console.log('JWT_SECRET at runtime:', JWT_SECRET)
+console.log('looking for env in:', join(__dirname, '..', '.env'))
 const port = Number(process.env.PORT || 4000)
 app.listen(port, () => console.log(`API listening on http://localhost:${port}`))
