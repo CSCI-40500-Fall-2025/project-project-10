@@ -51,14 +51,14 @@ export default function App() {
         },
       })
         .then(res => {
-          if (!res.ok) throw new Error('Unauthorized')
+          if (!res.ok) throw new Error('Unauthorized') // authorize the user
           return res.json()
         })
         .then(data => {
-          setUser(data.user) // Set user if token is valid
+          setUser(data.user) 
         })
         .catch(() => {
-          localStorage.removeItem('authToken') // Remove invalid token
+          localStorage.removeItem('authToken') 
         })
     }
   }, [])
@@ -116,7 +116,6 @@ export default function App() {
         }}
       >
         <Filters cities={listings.map(l => l.city)} onChange={setFilters} />
-        {/* Area for search results */}
         <div>
           {filtered.length > 0 && (
             <>
@@ -235,21 +234,21 @@ function AuthShell({
   )
 }
 
-// filepath: /client/src/components/LoginForm.tsx
+
 function LoginForm({ onAuthed }: { onAuthed: (u: User) => void }) {
   const [form, setForm] = useState({ name: '', password: '' })
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch('http://localhost:4000/login', {
+      const response = await fetch('http://localhost:4000/login', { // hit the login endpoint which should verify the user and passcode pushed
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
       if (!response.ok) throw new Error('Login failed')
       const { token, user } = await response.json()
-      localStorage.setItem('authToken', token) // Save token
+      localStorage.setItem('authToken', token) 
       onAuthed(user)
     } catch (error) {
       console.error(error)
@@ -263,7 +262,7 @@ function LoginForm({ onAuthed }: { onAuthed: (u: User) => void }) {
       <input
         placeholder="Name"
         value={form.name}
-        onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+        onChange={e => setForm(f => ({ ...f, name: e.target.value }))} // get values of username and password from here
       />
       <input
         placeholder="Passcode"
@@ -276,14 +275,14 @@ function LoginForm({ onAuthed }: { onAuthed: (u: User) => void }) {
   )
 }
 
-// filepath: /client/src/components/SignupForm.tsx
+
 function SignupForm({ onAuthed }: { onAuthed: (u: User) => void }) {
   const [form, setForm] = useState({ name: '', password: '', employer: '' })
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch('http://localhost:4000/signup', {
+      const response = await fetch('http://localhost:4000/signup', { // for signup hit the post signup endpoint, and then this is compared in login endpoint
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
