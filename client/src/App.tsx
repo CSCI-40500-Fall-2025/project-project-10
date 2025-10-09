@@ -4,7 +4,7 @@ import './index.css'
 import type { Listing, User } from './types'
 import { clearUser, getCurrentUser, getListings, saveUser, seedListingsIfNeeded } from './storage'
 import { generateMockListings } from './mockListings'
-import {ListingCard} from './components/NewListingCard'
+import { ListingCard } from './components/NewListingCard'
 import Filters, { type FiltersState } from './components/Filters'
 import { createUser as apiCreateUser, fetchListings, hasApi } from './api'
 
@@ -18,7 +18,13 @@ export default function App() {
   const [authView, setAuthView] = useState<AuthView>('login')
   const [user, setUser] = useState<User | null>(() => getCurrentUser())
   const [listings, setListings] = useState<Listing[]>([])
-  const [filters, setFilters] = useState<FiltersState>({ city: '', minPrice: '', maxPrice: '', beds: '', sort: 'priceAsc' })
+  const [filters, setFilters] = useState<FiltersState>({
+    city: '',
+    minPrice: 0,
+    maxPrice: 0,
+    beds: '',
+    sort: 'priceAsc',
+  })
 
   useEffect(() => {
     const run = async () => {
@@ -37,10 +43,35 @@ export default function App() {
     run()
   }, [])
 
-  const onLogout = () => { clearUser(); setUser(null) }
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    if (token) {
+      fetch('http://localhost:4000/protected', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Unauthorized') // authorize the user
+          return res.json()
+        })
+        .then(data => {
+          setUser(data.user) 
+        })
+        .catch(() => {
+          localStorage.removeItem('authToken') 
+        })
+    }
+  }, [])
+
+  const onLogout = () => {
+    clearUser()
+    setUser(null)
+  }
 
   const filtered = useMemo(() => {
     let arr = [...listings]
+
     if (filters.city) arr = arr.filter(l => l.city === filters.city)
     if (filters.minPrice) arr = arr.filter(l => l.price >= Number(filters.minPrice))
     if (filters.maxPrice) arr = arr.filter(l => l.price <= Number(filters.maxPrice))
@@ -49,73 +80,146 @@ export default function App() {
       if (beds === 4) arr = arr.filter(l => l.bedrooms >= 4)
       else arr = arr.filter(l => l.bedrooms === beds)
     }
+
     switch (filters.sort) {
-      case 'priceAsc': arr.sort((a,b)=>a.price-b.price); break
-      case 'priceDesc': arr.sort((a,b)=>b.price-a.price); break
-      case 'bedsAsc': arr.sort((a,b)=>a.bedrooms-b.bedrooms); break
-      case 'bedsDesc': arr.sort((a,b)=>b.bedrooms-a.bedrooms); break
-      case 'availAsc': arr.sort((a,b)=>a.availableFrom.localeCompare(b.availableFrom)); break
+      case 'priceAsc':
+        arr.sort((a, b) => a.price - b.price)
+        break
+      case 'priceDesc':
+        arr.sort((a, b) => b.price - a.price)
+        break
+      case 'bedsAsc':
+        arr.sort((a, b) => a.bedrooms - b.bedrooms)
+        break
+      case 'bedsDesc':
+        arr.sort((a, b) => b.bedrooms - a.bedrooms)
+        break
+      case 'availAsc':
+        arr.sort((a, b) => a.availableFrom.localeCompare(b.availableFrom))
+        break
     }
+
     return arr
   }, [listings, filters])
 
-  if (!user) return (
-    <AuthShell view={authView} setView={setAuthView} onAuthed={setUser} />
-  )
+  if (!user) return <AuthShell view={authView} setView={setAuthView} onAuthed={setUser} />
 
   return (
-    <div style={{ width: '100%', margin: '0 auto'}}>
+    <div style={{ width: '100%', margin: '0 auto' }}>
       <Header user={user} onLogout={onLogout} />
-
-      <div style={{display: 'flex', justifyContent: "space-between", maxWidth: 1440, width: '100%', margin: '24px auto 0 auto'}}>
-        <Filters cities={listings.map(l=>l.city)} onChange={setFilters} />
-
-        {/* Area for search results */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          maxWidth: 1440,
+          width: '100%',
+          margin: '24px auto 0 auto',
+        }}
+      >
+        <Filters cities={listings.map(l => l.city)} onChange={setFilters} />
         <div>
           {filtered.length > 0 && (
             <>
-              <Typography sx={{textAlign: "left", color: "black"}} variant="h4">{`Results (${filtered.length})`}</Typography>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 400px)', gridTemplateRows: "350px 350px", gridGap: "16px" }}>
-                {filtered.map(l =>  <Box sx={{placeSelf: "center"}}><ListingCard key={l.id} listing={l} /> </Box> )}
-              </div>          
+              <Typography sx={{ textAlign: 'left', color: 'black' }} variant="h4">
+                {`Results (${filtered.length})`}
+              </Typography>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 400px)',
+                  gridTemplateRows: '350px 350px',
+                  gridGap: '16px',
+                }}
+              >
+                {filtered.map(l => (
+                  <Box sx={{ placeSelf: 'center' }}>
+                    <ListingCard key={l.id} listing={l} />
+                  </Box>
+                ))}
+              </div>
             </>
-          )
-        }
-          {filtered.length === 0 && <Typography style={{opacity:0.7, marginTop: 20, color: "black", textAlign: "left"}} variant="h3">No results. Try broadening your filters.</Typography>}
+          )}
+          {filtered.length === 0 && (
+            <Typography
+              style={{ opacity: 0.7, marginTop: 20, color: 'black', textAlign: 'left' }}
+              variant="h3"
+            >
+              No results. Try broadening your filters.
+            </Typography>
+          )}
         </div>
-
       </div>
     </div>
   )
 }
 
-/*
-  Header for the entire website
-*/
-function Header({ user, onLogout }: { user: User, onLogout: () => void }) {
+/* Header for the entire website */
+function Header({ user, onLogout }: { user: User; onLogout: () => void }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', top:0, background:'white', padding:'12px 24px' }}>
-      <div style={{display: 'flex', justifyContent: "space-between", gap: "25px"}}>
-        <div style={{display: 'flex', justifyContent: "space-between", alignItems: "center", gap: "10px"}}>
-          <AcUnitIcon sx={{color: lightBlue['A400'], height: "36px", width: "36px"}}/>
-          <Typography variant="h5" sx={{color: "black"}}>RoomieMatch</Typography>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        top: 0,
+        background: 'white',
+        padding: '12px 24px',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '25px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+        >
+          <AcUnitIcon sx={{ color: lightBlue['A400'], height: '36px', width: '36px' }} />
+          <Typography variant="h5" sx={{ color: 'black' }}>
+            RoomieMatch
+          </Typography>
         </div>
-        <div style={{display: 'flex', justifyContent: "space-between", alignItems: "center", gap: "15px"}}>
-          <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Home</Typography>
-          <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Explore</Typography>
-          <Typography variant="h6" sx={{color: "black", fontSize: '16px'}}>Messages</Typography>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '15px',
+          }}
+        >
+          <Typography variant="h6" sx={{ color: 'black', fontSize: '16px' }}>
+            Home
+          </Typography>
+          <Typography variant="h6" sx={{ color: 'black', fontSize: '16px' }}>
+            Explore
+          </Typography>
+          <Typography variant="h6" sx={{ color: 'black', fontSize: '16px' }}>
+            Messages
+          </Typography>
         </div>
       </div>
-
-      <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-        <span style={{ opacity: 0.8, color: "black" }}>{user.name} • {user.employer}</span>
-        <button style={{backgroundColor: "white", color: "black"}} onClick={onLogout}>Logout</button>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <span style={{ opacity: 0.8, color: 'black' }}>
+          {user.name} • {user.employer}
+        </span>
+        <button style={{ backgroundColor: 'white', color: 'black' }} onClick={onLogout}>
+          Logout
+        </button>
       </div>
     </div>
   )
 }
 
-function AuthShell({ view, setView, onAuthed }: { view: AuthView, setView: (v:AuthView)=>void, onAuthed:(u:User)=>void }) {
+function AuthShell({
+  view,
+  setView,
+  onAuthed,
+}: {
+  view: AuthView
+  setView: (v: AuthView) => void
+  onAuthed: (u: User) => void
+}) {
   return (
     <Box sx={{ 
       minHeight: '100vh', 
@@ -175,20 +279,28 @@ function AuthShell({ view, setView, onAuthed }: { view: AuthView, setView: (v:Au
   )
 }
 
-function LoginForm({ onAuthed }: { onAuthed:(u:User)=>void }) {
-  const [form, setForm] = useState({ name:'', password:'' })
+
+function LoginForm({ onAuthed }: { onAuthed: (u: User) => void }) {
+  const [form, setForm] = useState({ name: '', password: '' })
+
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!form.name || !form.password) return
-    const u: User = { id: crypto.randomUUID(), name: form.name, age: null, gender: '', employer: 'Unknown', password: form.password }
     try {
-      if (hasApi) await apiCreateUser(u)
-    } catch (e) {
-      console.warn('User create via API failed, continuing with local user', e)
+      const response = await fetch('http://localhost:4000/login', { // hit the login endpoint which should verify the user and passcode pushed
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!response.ok) throw new Error('Login failed')
+      const { token, user } = await response.json()
+      localStorage.setItem('authToken', token) 
+      onAuthed(user)
+    } catch (error) {
+      console.error(error)
+      alert('Invalid credentials')
     }
-    saveUser(u)
-    onAuthed(u)
   }
+
   return (
     <form onSubmit={submit}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
@@ -239,20 +351,28 @@ function LoginForm({ onAuthed }: { onAuthed:(u:User)=>void }) {
   )
 }
 
-function SignupForm({ onAuthed }: { onAuthed:(u:User)=>void }) {
-  const [form, setForm] = useState({ name:'', age:'', gender:'', employer:'', password:'' })
+
+function SignupForm({ onAuthed }: { onAuthed: (u: User) => void }) {
+  const [form, setForm] = useState({ name: '', password: '', employer: '' })
+
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!form.name || !form.employer || !form.password) return
-    const u: User = { id: crypto.randomUUID(), name: form.name, age: form.age ? Number(form.age) : null, gender: form.gender, employer: form.employer, password: form.password }
     try {
-      if (hasApi) await apiCreateUser(u)
-    } catch (e) {
-      console.warn('User create via API failed, continuing with local user', e)
+      const response = await fetch('http://localhost:4000/signup', { // for signup hit the post signup endpoint, and then this is compared in login endpoint
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!response.ok) throw new Error('Signup failed')
+      const { token, user } = await response.json()
+      localStorage.setItem('authToken', token) // Save token
+      onAuthed(user)
+    } catch (error) {
+      console.error(error)
+      alert('Signup failed')
     }
-    saveUser(u)
-    onAuthed(u)
   }
+
   return (
     <form onSubmit={submit}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
