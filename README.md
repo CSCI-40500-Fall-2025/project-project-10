@@ -73,3 +73,42 @@ Notes
 - This MVP intentionally skips real authentication and encryption; passcodes are stored in plain text.
 - Data model includes Companies, Users (name/age/gender/employer), Areas, Listings, and Preferences for future matching.
 
+Priorities
+| Rank | Priority                                  | Description                                                      |
+| ---- | ----------------------------------------- | ---------------------------------------------------------------- |
+| 1    | **Software Reuse**                        | Maximize reuse of components for scalability and maintainability |
+| 2    | **Software Compatibility**                | Ensure compatibility across browser platforms                    |
+| 3    | **Nonfunctional Product Characteristics** | Focus on security, performance, and reliability                  |
+| 4    | **Product Lifetime**                      | Long-term maintainability and support                            |
+| 5    | **Number of Users**                       | Scalable to accommodate a growing user base                      |
+
+Layer Architecture
+| Layer                                  | Included | Description                                   |
+| -------------------------------------- | -------- | --------------------------------------------- |
+| **Browser-based / Mobile UI**          | Yes        | User interface for interactions               |
+| **Authentication & User Management**   | Yes        | Login, sign-up, and access control            |
+| **Application-Specific Functionality** | No        | Not included in this phase                    |
+| **Shared Services**                    | Yes        | Common infrastructure (e.g., search, storage) |
+| **Transaction Database Management**    | Yes        | Handles persistent data transactions          |
+
+Components and Services
+| Component                          | Description                                       |
+| ---------------------------------- | ------------------------------------------------- |
+| **UI**                             | Web browser-based interface                       |
+| **UI Management**                  | Handles authentication (login/logout)             |
+| **Configuration Services**         | N/A                                               |
+| **Application Services**           | Email, messaging, and calling features            |
+| **Integrated Services**            | N/A                                               |
+| **Shared Infrastructure Services** | Authentication, User Storage, App Storage, Search |
+
+System Design & Flow
+![alt text](image.png)
+
+Pros/Cons
+| Category              | Technology           |
+| --------------------- | -------------------- |
+| **Database**          | PostgreSQL (Neon)    |
+| **Platform**          | Web                  |
+| **Server**            | React + Express      |
+| **Open Source**       | N/A                  |
+| **Development Tools** | Docker, Vite, Vercel |
