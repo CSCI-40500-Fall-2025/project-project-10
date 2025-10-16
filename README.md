@@ -73,7 +73,8 @@ Notes
 - This MVP intentionally skips real authentication and encryption; passcodes are stored in plain text.
 - Data model includes Companies, Users (name/age/gender/employer), Areas, Listings, and Preferences for future matching.
 
-**Layered Architecture**
+**Layered Architecture Deliverable**
+
 Priorities
 | Rank | Priority                                  | Description                                                      |
 | ---- | ----------------------------------------- | ---------------------------------------------------------------- |
