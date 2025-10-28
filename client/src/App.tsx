@@ -9,8 +9,10 @@ import Filters, { type FiltersState } from './components/Filters'
 import { createUser as apiCreateUser, fetchListings, hasApi } from './api'
 
 import AcUnitIcon from '@mui/icons-material/AcUnit';
-import { Box, Typography, TextField, Button, Paper, Container, Tabs, Tab, MenuItem } from '@mui/material'
+import { Box, Typography, TextField, Button, Paper, Container, Tabs, Tab, MenuItem, Alert } from '@mui/material'
 import { lightBlue } from '@mui/material/colors'
+import { validateName, validateAge, validateEmployer, validatePasswordComplexity} from './validation'
+
 
 type AuthView = 'login' | 'signup'
 
@@ -353,23 +355,93 @@ function LoginForm({ onAuthed }: { onAuthed: (u: User) => void }) {
 
 
 function SignupForm({ onAuthed }: { onAuthed: (u: User) => void }) {
-  const [form, setForm] = useState({ name: '', password: '', employer: '' })
+  const [form, setForm] = useState({ 
+    name: '', 
+    password: '', 
+    employer: '',
+    age: '',
+    gender: ''
+  })
+  
+  // validation errors
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  
+  // UI help
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+
+  const handleBlur = (field: string, value: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }))
+    
+    let validation: { valid: boolean; error?: string }
+    
+    switch (field) {
+      case 'name':
+        validation = validateName(value)
+        break
+      case 'age':
+        validation = validateAge(value)
+        break
+      case 'employer':
+        validation = validateEmployer(value)
+        break
+      case 'password':
+        validation = validatePasswordComplexity(value)
+        break
+      default:
+        validation = { valid: true }
+    }
+    
+    setErrors(prev => ({
+      ...prev,
+      [field]: validation.valid ? '' : validation.error || ''
+    }))
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
+    
+    setTouched({
+      name: true,
+      age: true,
+      employer: true,
+      password: true
+    })
+    
+    // Validate all fields
+    const validations = {
+      name: validateName(form.name),
+      age: form.age ? validateAge(form.age) : { valid: true },
+      employer: validateEmployer(form.employer),
+      password: validatePasswordComplexity(form.password)
+    }
+    
+    const newErrors: Record<string, string> = {}
+    Object.entries(validations).forEach(([field, result]) => {
+      if (!result.valid && result.error) {
+        newErrors[field] = result.error
+      }
+    })
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    
     try {
-      const response = await fetch('http://localhost:4000/signup', { // for signup hit the post signup endpoint, and then this is compared in login endpoint
+      const response = await fetch('http://localhost:4000/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
+      
       if (!response.ok) throw new Error('Signup failed')
+      
       const { token, user } = await response.json()
-      localStorage.setItem('authToken', token) // Save token
+      localStorage.setItem('authToken', token)
       onAuthed(user)
     } catch (error) {
       console.error(error)
-      alert('Signup failed')
+      alert('Signup failed. Please try again.')
     }
   }
 
@@ -379,30 +451,52 @@ function SignupForm({ onAuthed }: { onAuthed: (u: User) => void }) {
         <Typography variant="h5" sx={{ fontWeight: 600, color: '#333', mb: 1 }}>
           Create your account
         </Typography>
+        {/* All the different errors */}
+        
+        {Object.keys(errors).length > 0 && touched.name && touched.password && touched.employer && (
+          <Alert severity="error">
+            Please correct the errors below before submitting.
+          </Alert>
+        )}
         
         <TextField
           label="Name"
           value={form.name}
-          onChange={e=>setForm(f=>({ ...f, name:e.target.value }))}
+          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+          onBlur={e => handleBlur('name', e.target.value)}
+          error={touched.name && !!errors.name}
+          helperText={touched.name && errors.name}
           fullWidth
           required
           variant="outlined"
+          inputProps={{
+            minLength: 2,
+            maxLength: 40,
+            pattern: "[a-zA-Z][a-zA-Z'-]{1,39}"
+          }}
         />
         
         <TextField
           label="Age"
           type="number"
           value={form.age}
-          onChange={e=>setForm(f=>({ ...f, age:e.target.value }))}
+          onChange={e => setForm(f => ({ ...f, age: e.target.value }))}
+          onBlur={e => handleBlur('age', e.target.value)}
+          error={touched.age && !!errors.age}
+          helperText={touched.age && errors.age}
           fullWidth
           variant="outlined"
+          inputProps={{
+            min: 18,
+            max: 120
+          }}
         />
         
         <TextField
           select
           label="Gender"
           value={form.gender}
-          onChange={e=>setForm(f=>({ ...f, gender:e.target.value }))}
+          onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}
           fullWidth
           variant="outlined"
         >
@@ -416,20 +510,38 @@ function SignupForm({ onAuthed }: { onAuthed: (u: User) => void }) {
         <TextField
           label="Employer / Company"
           value={form.employer}
-          onChange={e=>setForm(f=>({ ...f, employer:e.target.value }))}
+          onChange={e => setForm(f => ({ ...f, employer: e.target.value }))}
+          onBlur={e => handleBlur('employer', e.target.value)}
+          error={touched.employer && !!errors.employer}
+          helperText={touched.employer && errors.employer}
           fullWidth
           required
           variant="outlined"
+          inputProps={{
+            minLength: 2,
+            maxLength: 100
+          }}
         />
         
         <TextField
           label="Passcode"
           type="password"
           value={form.password}
-          onChange={e=>setForm(f=>({ ...f, password:e.target.value }))}
+          onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+          onBlur={e => handleBlur('password', e.target.value)}
+          error={touched.password && !!errors.password}
+          helperText={
+            touched.password && errors.password 
+              ? errors.password 
+              : 'Must be 8+ chars with uppercase, lowercase, digit, and special character'
+          }
           fullWidth
           required
           variant="outlined"
+          inputProps={{
+            minLength: 8,
+            maxLength: 128
+          }}
         />
         
         <Button 
