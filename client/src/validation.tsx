@@ -82,14 +82,7 @@ export const validateName = (name: string): { valid: boolean; error?: string } =
     return { valid: true }
   }
   
-  /**
-   * Password Complexity Validation:
-   * - Minimum 8 characters
-   * - At least one uppercase letter
-   * - At least one lowercase letter
-   * - At least one digit
-   * - At least one special character
-   */
+  // Minimum 8 characters, at least one uppercase letter, at least one lowercase letter, at least one digit, at least one special character
   export const validatePasswordComplexity = (password: string): { valid: boolean; error?: string } => {
     if (!password || password.length === 0) {
       return { valid: false, error: 'Password is required' }
