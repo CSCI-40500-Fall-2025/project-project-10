@@ -1,0 +1,47 @@
+import { generateMockListings } from './mockListings';
+
+describe('generateMockListings', () => {
+  test('should generate the specified number of listings', () => {
+    const listings = generateMockListings(7);
+    expect(listings).toHaveLength(7);
+  });
+
+
+  test('should contain all expected fields', () => {
+    const [listing] = generateMockListings(1);
+    expect(listing).toHaveProperty('id');
+    expect(listing).toHaveProperty('title');
+    expect(listing).toHaveProperty('city');
+    expect(listing).toHaveProperty('price');
+    expect(listing).toHaveProperty('bedrooms');
+    expect(listing).toHaveProperty('bathrooms');
+    expect(listing).toHaveProperty('availableFrom');
+    expect(listing).toHaveProperty('imageUrl');
+    expect(listing).toHaveProperty('sqft');
+  });
+
+  test('should have bathrooms >= 1 and roughly half of bedrooms', () => {
+    const listings = generateMockListings(50);
+    listings.forEach(listing => {
+      expect(listing.bathrooms).toBeGreaterThanOrEqual(1);
+      expect(listing.bathrooms).toBeLessThanOrEqual(listing.bedrooms);
+    });
+  });
+
+
+  test('should generate reasonable prices per city', () => {
+    const listings = generateMockListings(20);
+    listings.forEach(listing => {
+      expect(listing.price).toBeGreaterThan(1000);
+      expect(listing.price).toBeLessThan(6000);
+    });
+  });
+
+
+  test('should produce unique listing IDs', () => {
+    const listings = generateMockListings(30);
+    const ids = listings.map(l => l.id);
+    const uniqueIds = new Set(ids);
+    expect(uniqueIds.size).toBe(30);
+  });
+});
