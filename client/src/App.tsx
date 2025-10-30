@@ -7,7 +7,7 @@ import { generateMockListings } from './mockListings'
 import { ListingCard } from './components/NewListingCard'
 import Filters, { type FiltersState } from './components/Filters'
 import { createUser as apiCreateUser, fetchListings, hasApi } from './api'
-
+import { updateListings } from './app.util'
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import { Box, Typography, TextField, Button, Paper, Container, Tabs, Tab, MenuItem, Alert } from '@mui/material'
 import { lightBlue } from '@mui/material/colors'
@@ -71,38 +71,7 @@ export default function App() {
     setUser(null)
   }
 
-  const filtered = useMemo(() => {
-    let arr = [...listings]
-
-    if (filters.city) arr = arr.filter(l => l.city === filters.city)
-    if (filters.minPrice) arr = arr.filter(l => l.price >= Number(filters.minPrice))
-    if (filters.maxPrice) arr = arr.filter(l => l.price <= Number(filters.maxPrice))
-    if (filters.beds) {
-      const beds = Number(filters.beds)
-      if (beds === 4) arr = arr.filter(l => l.bedrooms >= 4)
-      else arr = arr.filter(l => l.bedrooms === beds)
-    }
-
-    switch (filters.sort) {
-      case 'priceAsc':
-        arr.sort((a, b) => a.price - b.price)
-        break
-      case 'priceDesc':
-        arr.sort((a, b) => b.price - a.price)
-        break
-      case 'bedsAsc':
-        arr.sort((a, b) => a.bedrooms - b.bedrooms)
-        break
-      case 'bedsDesc':
-        arr.sort((a, b) => b.bedrooms - a.bedrooms)
-        break
-      case 'availAsc':
-        arr.sort((a, b) => a.availableFrom.localeCompare(b.availableFrom))
-        break
-    }
-
-    return arr
-  }, [listings, filters])
+  const filtered = useMemo(() => updateListings(listings, filters), [listings, filters])
 
   if (!user) return <AuthShell view={authView} setView={setAuthView} onAuthed={setUser} />
 
