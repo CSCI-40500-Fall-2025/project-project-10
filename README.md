@@ -1,5 +1,7 @@
 Find Housing – Fullstack MVP
 
+[![Node.js CI](https://github.com/CSCI-40500-Fall-2025/project-project-10/actions/workflows/node.js.yml/badge.svg)](https://github.com/CSCI-40500-Fall-2025/project-project-10/actions/workflows/node.js.yml)
+
 Stack
 - Client: React + TypeScript (Vite) in `client/`
 - API: Express + PostgreSQL in `server/`
