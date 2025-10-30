@@ -42,7 +42,7 @@ describe('generateMockListings', () => {
   test('should produce unique listing IDs', () => {
     const listings = generateMockListings(30);
     const ids = listings.map(l => l.id);
-    const uniqueIds = new Set(ids); // make sure in a set, there are as many ids as listings, set contains unique so good for this
+    const uniqueIds = new Set(ids); // make sure in a set, there are as many ids as listings, set contains unique so good for this test case
     expect(uniqueIds.size).toBe(30);
   });
 });
