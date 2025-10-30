@@ -1,4 +1,5 @@
 import { generateMockListings } from './mockListings';
+import {describe, expect, test} from "vitest";
 
 describe('generateMockListings', () => {
   test('should generate the specified number of listings', () => {
