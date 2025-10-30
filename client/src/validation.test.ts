@@ -69,7 +69,6 @@ describe('validation functions', () => {
     })
 
     expect(valid).toBe(false)
-    // should have errors for each provided field
     expect(Object.keys(errors).length).toBeGreaterThanOrEqual(4)
     expect(errors).toHaveProperty('name')
     expect(errors).toHaveProperty('age')
