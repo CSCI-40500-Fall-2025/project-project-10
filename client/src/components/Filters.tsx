@@ -60,7 +60,7 @@ export default function Filters({ cities, onChange }: Props) {
           max={5000}
           getAriaValueText={(value) => `$${value}`}
           value={state.minPrice}
-          onChange={(e) => setState(s => ({ ...s, minPrice: e.target.value }))}
+          onChange={(_, value) => setState(s => ({ ...s, minPrice: value as number }))}
           marks={[
                 {
                   value: 0,
