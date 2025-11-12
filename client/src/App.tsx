@@ -6,7 +6,7 @@ import { clearUser, getCurrentUser, getListings, seedListingsIfNeeded } from './
 import { generateMockListings } from './mockListings'
 import { ListingCard } from './components/NewListingCard'
 import Filters, { type FiltersState } from './components/Filters'
-import { createUser as apiCreateUser, fetchListings, hasApi } from './api'
+import { fetchListings, hasApi } from './api'
 import { updateListings } from './app.util'
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import { Box, Typography, TextField, Button, Paper, Container, Tabs, Tab, MenuItem, Alert } from '@mui/material'
