@@ -17,6 +17,6 @@ client/.env.local
 *.log
 
 # package lock
-*package-lock.json*
+
 
 .history/
