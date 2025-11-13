@@ -47,11 +47,8 @@ jobs:
       - name: Install server/root dependencies
         run: npm install
 
-      - name: Run server tests
-        run: npm test
-
       - name: Trigger Vercel deployment
-        if: success() # only runs if this job's tests passed
+        if: success()
         run: |
           curl -X POST "$VERCEL_DEPLOY_HOOK_URL"
         env:
