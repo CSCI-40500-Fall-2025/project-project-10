@@ -16,7 +16,10 @@ client/.env.local
 .DS_Store
 *.log
 
-# package lock
-
-
 .history/
+
+# Documentation - ignore all .md files except README.md
+*.md
+!README.md
+.context/*.md
+
