@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Companies
 CREATE TABLE IF NOT EXISTS companies (
   id SERIAL PRIMARY KEY,
