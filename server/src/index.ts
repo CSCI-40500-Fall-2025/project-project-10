@@ -17,13 +17,12 @@ dotenv.config({ path: join(__dirname, '..', '.env') })
 
 
 const app = express()
-
+app.use(cors())
 app.use(express.json())
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   next();
-}
-
+})
 // health
 app.get('/health', (_req, res) => res.json({ ok: true }))
 
