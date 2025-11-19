@@ -203,7 +203,7 @@ app.post('/login', async (req, res) => {
     const { name, password } = parsed.data
     const u = await getUserByName(name)
     if (!u){
-      logger.warn("user might not exist"); // warn log
+      logger.warn("user might not exist or wrong username/password"); // warn log
       return res.status(401).json({ message: 'Invalid credentials' })
     }
 
