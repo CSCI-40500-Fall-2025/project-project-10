@@ -42,6 +42,22 @@ jobs:
         working-directory: ./client
         run: npm run build
 
+  # Step 1.5: Add .env files from the repo secrets
+  add-secrets:
+    name: Add Secrets to Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+  
+      - name: Add FrontEnd DotEnv
+        working-directory: ./client
+        run: echo VITE_API_URL=${{secrets.API_URL}} > .env
+
+      - name: Add BackEnd DotEnv
+        working-directory: ./server
+        run: echo DATABASE_URL=${{secrets.DATABASE_URL}} > .env
+
   # Step 2: Verify server builds (runs after client tests pass)
   server-build:
     name: Backend Build Verification
