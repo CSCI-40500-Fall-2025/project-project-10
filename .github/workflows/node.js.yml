@@ -86,18 +86,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify Vercel deploy hook is configured
+      - name: Verify Vercel deploy hooks are configured
         run: |
-          if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" ]; then
-            echo "[WARNING] VERCEL_DEPLOY_HOOK_URL secret is not set"
-            echo "Please add it in: Settings -> Secrets -> Actions"
+          MISSING_SECRETS=()
+          
+          if [ -z "${{ secrets.VERCEL_FRONTEND_DEPLOY_HOOK }}" ]; then
+            MISSING_SECRETS+=("VERCEL_FRONTEND_DEPLOY_HOOK")
+          fi
+          
+          if [ -z "${{ secrets.VERCEL_BACKEND_DEPLOY_HOOK }}" ]; then
+            MISSING_SECRETS+=("VERCEL_BACKEND_DEPLOY_HOOK")
+          fi
+          
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "[WARNING] Missing secrets: ${MISSING_SECRETS[*]}"
+            echo "Please add them in: Settings -> Secrets -> Actions"
             exit 1
           fi
 
-      - name: Trigger Vercel deployment
+      - name: Trigger Frontend deployment
         run: |
-          echo "[DEPLOY] Triggering Vercel deployment..."
-          RESPONSE=$(curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" \
+          echo "[DEPLOY] Triggering Frontend (client) deployment..."
+          RESPONSE=$(curl -X POST "${{ secrets.VERCEL_FRONTEND_DEPLOY_HOOK }}" \
             --write-out "\n%{http_code}" \
             --silent \
             --show-error)
@@ -105,18 +115,36 @@ jobs:
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "[SUCCESS] Vercel deployment triggered successfully (HTTP $HTTP_CODE)"
+            echo "[SUCCESS] Frontend deployment triggered (HTTP $HTTP_CODE)"
           else
-            echo "[ERROR] Vercel deployment trigger failed (HTTP $HTTP_CODE)"
+            echo "[ERROR] Frontend deployment failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      - name: Trigger Backend deployment
+        run: |
+          echo "[DEPLOY] Triggering Backend (server) deployment..."
+          RESPONSE=$(curl -X POST "${{ secrets.VERCEL_BACKEND_DEPLOY_HOOK }}" \
+            --write-out "\n%{http_code}" \
+            --silent \
+            --show-error)
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "[SUCCESS] Backend deployment triggered (HTTP $HTTP_CODE)"
+          else
+            echo "[ERROR] Backend deployment failed (HTTP $HTTP_CODE)"
             exit 1
           fi
 
       - name: Deployment summary
         run: |
-          echo "## Deployment Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployments Triggered" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- [PASS] Frontend tests passed" >> $GITHUB_STEP_SUMMARY
           echo "- [PASS] Backend build verified" >> $GITHUB_STEP_SUMMARY
-          echo "- [PASS] Vercel deployment initiated" >> $GITHUB_STEP_SUMMARY
+          echo "- [PASS] Frontend deployment initiated" >> $GITHUB_STEP_SUMMARY
+          echo "- [PASS] Backend deployment initiated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Check deployment status in [Vercel Dashboard](https://vercel.com/dashboard)" >> $GITHUB_STEP_SUMMARY
