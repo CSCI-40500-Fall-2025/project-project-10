@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import logger from './logger'
 
 
 const __filename = fileURLToPath(import.meta.url)
@@ -14,6 +15,7 @@ const __dirname = dirname(__filename)
 
 dotenv.config({ path: join(__dirname, '..', '.env') })
 
+logger.info("Server has started"); // fine log
 
 
 const app = express()
@@ -28,21 +30,27 @@ app.get('/health', (_req, res) => res.json({ ok: true }))
 
 // admin view
 app.post('/admin/init', async (_req, res) => {
+  logger.info("/admin/init route called"); // fine log
   try {
     await pool.query("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
     const sql = (await import('fs/promises')).readFile(new URL('./schema.sql', import.meta.url))
     const text = await sql
     await pool.query(text.toString())
     res.json({ ok: true })
+    logger.info("Database initialized successfully in /admin/init"); // info log
   } catch (e: any) {
     console.error(e)
     res.status(500).json({ error: e.message })
+    logger.error({ err: e }, "Error during /admin/init"); // error log
   }
 })
 
 // companies
 app.get('/companies', async (_req, res) => {
   const { rows } = await query('SELECT id, name, domain FROM companies ORDER BY name ASC')
+  if (rows.length === 0) {
+    logger.warn("Companies table returned 0 rows"); // warn log
+  }
   res.json(rows)
 })
 
@@ -116,7 +124,10 @@ const ListingSchema = z.object({
 
 app.post('/listings', async (req, res) => {
   const parsed = ListingSchema.safeParse(req.body)
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() })
+  if (!parsed.success){
+    logger.error({ err: parsed.error.flatten() }, "error during posting to listings"); // warn log
+    return res.status(400).json({ error: parsed.error.flatten() })
+  }
   const l = parsed.data
   const { rows } = await query<{ id: string }>(
     `INSERT INTO listings (title, city, area_id, price, bedrooms, bathrooms, available_from, image_url, sqft, furnished, pets_allowed, description, owner_user_id)
@@ -124,6 +135,9 @@ app.post('/listings', async (req, res) => {
      RETURNING id`,
     [l.title, l.city, l.areaId ?? null, l.price, l.bedrooms, l.bathrooms, l.availableFrom, l.imageUrl ?? null, l.sqft ?? null, l.furnished ?? false, l.petsAllowed ?? false, l.description ?? null, l.ownerUserId ?? null]
   )
+  if(rows.length == 0){
+    logger.warn("No rows returned after inserting listing"); // warn log
+  }
   res.status(201).json({ id: rows[0].id, ...l })
 })
 
@@ -144,6 +158,7 @@ async function getUserByName(name: string) {
 
 // signup
 app.post('/signup', async (req, res) => {
+  logger.info("/signup route called"); // fine log
   try {
     const Body = z.object({
       name: z.string().min(1),
@@ -151,7 +166,10 @@ app.post('/signup', async (req, res) => {
       employer: z.string().min(1)
     })
     const parsed = Body.safeParse(req.body)
-    if (!parsed.success) return res.status(400).json({ message: 'Invalid input' })
+    if (!parsed.success){
+      logger.error({ err: parsed.error.flatten() }, "error during signup"); // warn log
+      return res.status(400).json({ message: 'Invalid input' })
+    }
 
     const { name, password, employer } = parsed.data
 
@@ -165,15 +183,18 @@ app.post('/signup', async (req, res) => {
 
     const user = rows[0]
     const token = signToken({ id: user.id, name: user.name, employer: user.employer })
+    logger.info(user); // info log
     res.json({ token, user })
   } catch (e) {
     console.error(e)
+    logger.error({ err: e }, "exception during signup"); // error log
     res.status(500).json({ message: 'Signup failed' })
   }
 })
 
 
 app.post('/login', async (req, res) => {
+  logger.info("/login route called"); // fine log
   try {
     const Body = z.object({ name: z.string().min(1), password: z.string().min(1) })
     const parsed = Body.safeParse(req.body)
@@ -181,16 +202,23 @@ app.post('/login', async (req, res) => {
 
     const { name, password } = parsed.data
     const u = await getUserByName(name)
-    if (!u) return res.status(401).json({ message: 'Invalid credentials' })
+    if (!u){
+      logger.warn("user might not exist or wrong username/password"); // warn log
+      return res.status(401).json({ message: 'Invalid credentials' })
+    }
 
     const stored = String(u.passcode || '')
     const ok = stored.startsWith('$2') ? await bcrypt.compare(password, stored) : stored === password
-    if (!ok) return res.status(401).json({ message: 'Wrong Password' })
+    if (!ok){
+      logger.warn("wrong password attempt"); // warn log
+      return res.status(401).json({ message: 'Wrong Password' })
+    }
 
     const token = signToken({ id: u.id, name: u.name, employer: u.employer })
     res.json({ token, user: { id: u.id, name: u.name, employer: u.employer } })
   } catch (e) {
     console.error(e)
+    logger.error({ err: e }, "exception during login"); // error log
     res.status(500).json({ message: 'Login failed' })
   }
 })
@@ -199,7 +227,10 @@ app.post('/login', async (req, res) => {
 app.get('/protected', (req, res) => {
   const authHeader = req.headers['authorization']
   const token = authHeader?.split(' ')[1]
-  if (!token) return res.sendStatus(401)
+  if (!token){
+    logger.info("no token") // info log
+    return res.sendStatus(401)
+  }
 
   jwt.verify(token, JWT_SECRET, (err, payload: any) => {
     if (err) return res.sendStatus(403)
