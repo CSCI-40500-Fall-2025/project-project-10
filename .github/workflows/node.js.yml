@@ -21,11 +21,11 @@ jobs:
   
       - name: Add FrontEnd DotEnv
         working-directory: ./client
-        run: echo VITE_API_URL=${{secrets.API_URL}} > .env
+        run: echo VITE_API_URL=${{secrets.API_URL}} > ./dist/.env
 
       - name: Add BackEnd DotEnv
         working-directory: ./server
-        run: echo DATABASE_URL=${{secrets._URL}} > .env
+        run: echo DATABASE_URL=${{secrets._URL}} > ./dist/.env
 
   # Step 1: Run client tests
   client-tests:
