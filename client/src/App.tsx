@@ -16,6 +16,8 @@ import { validateName, validateAge, validateEmployer, validatePasswordComplexity
 
 type AuthView = 'login' | 'signup'
 
+const API_URL = import.meta.env.VITE_API_URL as string | undefined
+
 export default function App() {
   const [authView, setAuthView] = useState<AuthView>('login')
   const [user, setUser] = useState<User | null>(() => getCurrentUser())
@@ -48,7 +50,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (token) {
-      fetch('http://localhost:4000/protected', {
+      fetch(`${API_URL}/protected`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -257,7 +259,7 @@ function LoginForm({ onAuthed }: { onAuthed: (u: User) => void }) {
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch('http://localhost:4000/login', { // hit the login endpoint which should verify the user and passcode pushed
+      const response = await fetch(`${API_URL}/login`, { // hit the login endpoint which should verify the user and passcode pushed
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -397,7 +399,7 @@ function SignupForm({ onAuthed }: { onAuthed: (u: User) => void }) {
     }
     
     try {
-      const response = await fetch('http://localhost:4000/signup', {
+      const response = await fetch(`${API_URL}/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
