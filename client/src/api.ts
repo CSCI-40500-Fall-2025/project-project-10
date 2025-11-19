@@ -1,6 +1,7 @@
 import type { Listing, User } from './types'
+import process from 'process'
 
-const API_URL = import.meta.env.VITE_API_URL as string | undefined
+const API_URL = process.env.VITE_API_URL as string | undefined
 
 export const hasApi = !!API_URL
 

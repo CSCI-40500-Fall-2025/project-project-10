@@ -12,11 +12,11 @@ import AcUnitIcon from '@mui/icons-material/AcUnit';
 import { Box, Typography, TextField, Button, Paper, Container, Tabs, Tab, MenuItem, Alert } from '@mui/material'
 import { lightBlue } from '@mui/material/colors'
 import { validateName, validateAge, validateEmployer, validatePasswordComplexity} from './validation'
-
+import process from 'process'
 
 type AuthView = 'login' | 'signup'
 
-const API_URL = import.meta.env.VITE_API_URL as string | undefined
+const API_URL = process.env.VITE_API_URL as string | undefined ?? import.meta.env.VITE_API_URL as string | undefined
 
 export default function App() {
   const [authView, setAuthView] = useState<AuthView>('login')
