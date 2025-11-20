@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import logger from './logger'
+import logger from './logger.js'
 
 
 const __filename = fileURLToPath(import.meta.url)
