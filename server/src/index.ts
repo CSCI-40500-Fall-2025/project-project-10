@@ -47,6 +47,7 @@ app.post('/admin/init', async (_req, res) => {
 
 // companies
 app.get('/companies', async (_req, res) => {
+  logger.info("/companies route called"); // fine log
   const { rows } = await query('SELECT id, name, domain FROM companies ORDER BY name ASC')
   if (rows.length === 0) {
     logger.warn("Companies table returned 0 rows"); // warn log
@@ -127,7 +128,7 @@ app.post('/listings', async (req, res) => {
 
   const parsed = ListingSchema.safeParse(req.body)
   if (!parsed.success){
-    logger.error({ err: parsed.error.flatten() }, "error during posting to listings"); // warn log
+    logger.warn({ err: parsed.error.flatten() }, "error during posting to listings"); // warn log
     return res.status(400).json({ error: parsed.error.flatten() })
   }
   const l = parsed.data
@@ -156,11 +157,17 @@ function signToken(payload: any) {
 }
 
 async function getUserByName(name: string) {
+  try{
+    logger.info("fetching user by name");
   const { rows } = await query(
     'SELECT id, name, employer, passcode FROM users WHERE name = $1',
     [name]
   )
   return rows[0] || null
+} catch(e){
+    logger.error("error fetching user by name"); // error log
+    return null;
+}
 }
 
 // signup
@@ -173,14 +180,19 @@ app.post('/signup', async (req, res) => {
       employer: z.string().min(1)
     })
     const parsed = Body.safeParse(req.body)
+    logger.info("parsed signup body"); // info log
     if (!parsed.success){
-      logger.error({ err: parsed.error.flatten() }, "error during signup"); // warn log
+      
+      logger.warn({ err: parsed.error.flatten() }, "error during signup"); // warn log
       return res.status(400).json({ message: 'Invalid input' })
     }
 
     const { name, password, employer } = parsed.data
 
     const hash = await bcrypt.hash(password, 12)
+    if(!hash){
+      logger.fatal("password hashing failed, could be a privacy warning"); // fatal log
+    }
     const { rows } = await query<{ id: string; name: string; employer: string }>(
       `INSERT INTO users (name, age, gender, employer, company_id, passcode)
        VALUES ($1,$2,$3,$4,$5,$6)
@@ -205,7 +217,10 @@ app.post('/login', async (req, res) => {
   try {
     const Body = z.object({ name: z.string().min(1), password: z.string().min(1) })
     const parsed = Body.safeParse(req.body)
-    if (!parsed.success) return res.status(400).json({ message: 'Invalid input' })
+    if (!parsed.success){
+      logger.info("rejected login, invalid input"); // info log
+      return res.status(400).json({ message: 'Invalid input' })
+    }
 
     const { name, password } = parsed.data
     const u = await getUserByName(name)
@@ -215,6 +230,9 @@ app.post('/login', async (req, res) => {
     }
 
     const stored = String(u.passcode || '')
+    if(!stored){
+      logger.fatal("no stored passcode found, can break the database if no password is passed through in signup!"); // fatal log
+    }
     const ok = stored.startsWith('$2') ? await bcrypt.compare(password, stored) : stored === password
     if (!ok){
       logger.warn("wrong password attempt"); // warn log
@@ -222,6 +240,9 @@ app.post('/login', async (req, res) => {
     }
 
     const token = signToken({ id: u.id, name: u.name, employer: u.employer })
+    if(!token){
+      logger.fatal("token generation failed"); // fatal log
+    }
     res.json({ token, user: { id: u.id, name: u.name, employer: u.employer } })
   } catch (e) {
     console.error(e)
@@ -240,7 +261,11 @@ app.get('/protected', (req, res) => {
   }
 
   jwt.verify(token, JWT_SECRET, (err, payload: any) => {
-    if (err) return res.sendStatus(403)
+    if (err){
+      logger.error("token verification failed") // error log
+      logger.fatal("maybe token is corrupted"); // fatal log
+      return res.sendStatus(403)
+    }
     res.json({ user: { id: payload.id, name: payload.name, employer: payload.employer } })
   })
 })
