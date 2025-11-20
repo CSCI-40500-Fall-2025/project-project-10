@@ -123,6 +123,8 @@ const ListingSchema = z.object({
 })
 
 app.post('/listings', async (req, res) => {
+  try{
+
   const parsed = ListingSchema.safeParse(req.body)
   if (!parsed.success){
     logger.error({ err: parsed.error.flatten() }, "error during posting to listings"); // warn log
@@ -139,6 +141,11 @@ app.post('/listings', async (req, res) => {
     logger.warn("No rows returned after inserting listing"); // warn log
   }
   res.status(201).json({ id: rows[0].id, ...l })
+}
+  catch(e){
+    logger.fatal({err: e}, "fatal error, maybe query is not working"); // fatal log
+    res.status(500).json({ message: 'Internal server error' })
+  }
 })
 
 
