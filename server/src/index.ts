@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import logger from './logger.js'
+import { GoogleGenAI } from "@google/genai";
 
 
 const __filename = fileURLToPath(import.meta.url)
@@ -272,3 +273,28 @@ app.get('/protected', (req, res) => {
 
 const port = Number(process.env.PORT || 4000)
 app.listen(port, () => console.log(`API listening on http://localhost:${port}`))
+
+
+// make external api call to gemini
+
+app.post('/recommendations', async (req, res) => {
+  const ai = new GoogleGenAI({});
+  const { listings } = req.body;
+
+  if (!listings || !Array.isArray(listings) || listings.length === 0) {
+    return res.status(400).json({ error: 'Listings are required.' });
+  }
+  
+  try {
+    const prompt = `Based on these listings, recommend one for a young professional and explain why in a single sentence:\n\n${JSON.stringify(listings, null, 2)}`;
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+    const recommendation = response.candidates?.[0]?.content?.parts?.[0]?.text ?? "No recommendation available.";
+    res.json({ recommendation });
+  } catch (e: any) {
+    logger.error({ err: e }, "Error getting recommendation from Gemini");
+    res.status(500).json({ error: 'Failed to get recommendations.' });
+  }
+});

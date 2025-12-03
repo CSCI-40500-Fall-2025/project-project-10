@@ -92,7 +92,8 @@ export default function App() {
       >
         <div >
           <Filters cities={listings.map(l => l.city)} onChange={setFilters} />
-          <Recommendations />
+          
+          <Recommendations listings={filtered} />
         </div>
         <div>
           {filtered.length > 0 && (

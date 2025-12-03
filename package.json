@@ -3,6 +3,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@google/genai": "^1.30.0",
     "pino": "^10.1.0",
     "pino-http": "^11.0.0"
   }
