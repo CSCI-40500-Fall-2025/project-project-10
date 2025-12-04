@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { lightBlue } from '@mui/material/colors';
 import type { Listing } from "../types";
-import { ListingCard } from './NewListingCard'
 
 type RecommendationsProps = {
     listings: Listing[];
@@ -35,7 +34,7 @@ export default function Recommendations({ listings }: RecommendationsProps) {
                 const data = await response.json();
                 setRecommendation(data.recommendation);
             } catch (error) {
-                console.error(error);
+                console.error(error, "TESTER");
                 setRecommendation('Could not load recommendation.');
             }
         };

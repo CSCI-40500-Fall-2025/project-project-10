@@ -286,7 +286,7 @@ app.post('/recommendations', async (req, res) => {
   }
   
   try {
-    const prompt = `Based on these listings, recommend one for a young professional and explain why in a single sentence:\n\n${JSON.stringify(listings, null, 2)}`;
+    const prompt = `Based on these listings, recommend one for a young professional and explain why in a single sentence. Don't include ID:\n\n${JSON.stringify(listings, null, 2)}`;
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
