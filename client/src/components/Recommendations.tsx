@@ -34,7 +34,7 @@ export default function Recommendations({ listings }: RecommendationsProps) {
                 const data = await response.json();
                 setRecommendation(data.recommendation);
             } catch (error) {
-                console.error(error, "TESTER");
+                console.error(error);
                 setRecommendation('Could not load recommendation.');
             }
         };
