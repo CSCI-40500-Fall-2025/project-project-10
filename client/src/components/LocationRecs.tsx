@@ -2,57 +2,57 @@ import { useEffect, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { lightBlue } from '@mui/material/colors';
 import debounce from "lodash/debounce";
-import type { Listing } from "../types";
 
-type RecommendationsProps = {
-    listings: Listing[];
+type LocationRecsProps = {
+    location: string;
 }
 
-export default function Recommendations({ listings }: RecommendationsProps) {
-    const [recommendation, setRecommendation] = useState<string>('Generating recommendation...');
+export default function LocationRecs({ location }: LocationRecsProps) {
+    const [locationInfo, setLocationInfo] = useState<string>('Getting fun stuff...'); 
     const API_URL = process.env.VITE_API_URL as string | undefined ?? import.meta.env.VITE_API_URL as string | undefined
 
     useEffect(() => {
-        if (listings.length === 0) {
-            setRecommendation('Not enough data to make a recommendation.');
+        if (location.length === 0) {
+            setLocationInfo('Please select a city for fun sites.');
             return;
         }
 
-        const getRecommendation = async () => {
+        const getLocationInfo = async () => {
             try {
-                setRecommendation('Getting recommendation...')
-                const response = await fetch(`${API_URL}/recommendations`, {
+                setLocationInfo('Getting fun stuff...')
+                const response = await fetch(`${API_URL}/locationInfo`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ listings }),
+                    body: JSON.stringify({ 'location': location }),
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch recommendation');
+                    throw new Error('Failed to fetch fun stuff');
                 }
 
                 const data = await response.json();
-                setRecommendation(data.recommendation);
+                setLocationInfo(data.recommendations);
             } catch (error) {
                 console.error(error);
-                setRecommendation('Could not load recommendation.');
+                setLocationInfo('Could not load recommendation.');
             }
         };
 
-        debounce(getRecommendation, 2000)();
-    }, [listings, API_URL]);
+        debounce(getLocationInfo, 2000)();
+    }, [location, API_URL]);
 
 
     return (
         <Box>
             <Box sx={{display: "flex", flexDirection : "col", justifyContent: "center", mt: "24px",width: 400, height: 50, padding: "16px 24px", backgroundColor: lightBlue['A400'], borderRadius: "25px 25px 0 0"}}>
-                <Typography variant="h4" sx={{color: "white"}}>Our Recommendations</Typography>
+                <Typography variant="h4" sx={{color: "white"}}>Things to do</Typography>
             </Box>
 
             <Box sx={{mt: "0",width: 400, height: 300, padding: "16px 24px", backgroundColor: "white", borderRadius: "0 0 25px 25px"}}>
-                <Typography variant="h5" sx={{color: "black"}}>{recommendation}</Typography>
+
+                {locationInfo.split("*").map((text) => text.length > 0 && <Typography variant="h5" sx={{color: "black"}}>{`- ${text}`}</Typography>)}
             </Box>
         </Box>
     )

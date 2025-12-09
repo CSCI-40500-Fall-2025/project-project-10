@@ -7,6 +7,7 @@ import { generateMockListings } from './mockListings'
 import { ListingCard } from './components/NewListingCard'
 import Filters, { type FiltersState } from './components/Filters'
 import Recommendations from './components/Recommendations'
+import LocationRecs from "./components/LocationRecs"
 import { fetchListings, hasApi } from './api'
 import { updateListings } from './app.util'
 import AcUnitIcon from '@mui/icons-material/AcUnit';
@@ -94,6 +95,7 @@ export default function App() {
           <Filters cities={listings.map(l => l.city)} onChange={setFilters} />
           
           <Recommendations listings={filtered} />
+          <LocationRecs location={filters.city}/>
         </div>
         <div>
           {filtered.length > 0 && (
