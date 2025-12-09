@@ -298,3 +298,25 @@ app.post('/recommendations', async (req, res) => {
     res.status(500).json({ error: 'Failed to get recommendations.' });
   }
 });
+
+app.post('/locationInfo', async (req, res) => {
+  const ai = new GoogleGenAI({});
+  const { location } = req.body;
+
+  if (!location || typeof location !== 'string' || location.length === 0) {
+    return res.status(400).json({ error: 'Location cannot be empty or non string.' });
+  }
+  
+  try {
+    const prompt = `Tell me some fun and good locations in ${location} be very short and sweet and just say location names in bullet points seperated by new lines`;
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+    const recommendations = response.candidates?.[0]?.content?.parts?.[0]?.text ?? "No data available.";
+    res.json({ recommendations });
+  } catch (e: any) {
+    logger.error({ err: e }, "Error getting recommendation from Gemini");
+    res.status(500).json({ error: 'Failed to get recommendations.' });
+  }
+});
